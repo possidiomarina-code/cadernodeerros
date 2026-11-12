@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedBento — Caderno de Erros & Flashcards</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            canvas: '#F8F9F7',
+            navdark: '#141414',
+            ink: '#1E1E1E',
+            muted: '#525252',
+            clinica: {
+              bg: '#E2F1F8',
+              border: '#BAE0F3',
+              accent: '#0284C7',
+              text: '#0C4A6E'
+            },
+            go: {
+              bg: '#F0D9FA',
+              border: '#E2B6F7',
+              accent: '#9333EA',
+              text: '#581C87'
+            },
+            cirurgia: {
+              bg: '#DDF3DC',
+              border: '#B8E6B5',
+              accent: '#16A34A',
+              text: '#14532D'
+            },
+            pediatria: {
+              bg: '#FDF3D0',
+              border: '#F9E295',
+              accent: '#D97706',
+              text: '#713F12'
+            },
+            preventiva: {
+              bg: '#FCE4D8',
+              border: '#F7C6AE',
+              accent: '#EA580C',
+              text: '#7C2D12'
+            }
+          },
+          borderRadius: {
+            'bento': '24px',
+            'bento-lg': '32px'
+          },
+          boxShadow: {
+            'bento': '0 4px 20px -2px rgba(20, 20, 20, 0.04), 0 2px 6px -1px rgba(20, 20, 20, 0.02)',
+            'bento-hover': '0 14px 30px -4px rgba(20, 20, 20, 0.08), 0 4px 10px -2px rgba(20, 20, 20, 0.03)',
+            'floating': '0 20px 40px -10px rgba(20, 20, 20, 0.25)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #EBECE8;
+      color: #1E1E1E;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F8F9F7;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D4D6D0;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #A8ABA3;
+    }
+
+    /* Bento Card Transitions */
+    .bento-card {
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .bento-card:hover {
+      transform: translateY(-3px);
+    }
+    .bento-tilt:hover {
+      transform: translateY(-4px) rotate(-0.6deg);
+    }
+
+    /* Top Notch Effect like reference screenshot */
+    .nav-notch {
+      position: relative;
+    }
+    .nav-notch::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 48px;
+      height: 10px;
+      background-color: #F8F9F7;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+    }
+
+    /* Cloze Deletion Pill Styling */
+    .cloze-blank {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      margin: 0 3px;
+      border-radius: 999px;
+      background-color: #141414;
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 0.85em;
+      letter-spacing: 0.04em;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    .cloze-revealed {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      margin: 0 3px;
+      border-radius: 999px;
+      background-color: #16A34A;
+      color: #FFFFFF;
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* Highlight Pulse Animation when jumping from Flashcard to Error */
+    @keyframes highlightPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(20, 20, 20, 0); }
+      30% { box-shadow: 0 0 0 6px rgba(20, 20, 20, 0.85); transform: scale(1.01); }
+      60% { box-shadow: 0 0 0 4px rgba(20, 20, 20, 0.4); }
+    }
+    .pulse-target {
+      animation: highlightPulse 2s ease-in-out;
+    }
+
+    /* Dashed connector lines */
+    .dashed-connector {
+      background-image: linear-gradient(to bottom, #86EFAC 50%, rgba(255,255,255,0) 0%);
+      background-position: left;
+      background-size: 2px 10px;
+      background-repeat: repeat-y;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-2 sm:p-4 md:p-6 flex flex-col items-center">
+
+  <!-- OUTER APP SHELL (Inspired by the dark framed tablet/desktop Soft Bento UI) -->
+  <div class="w-full max-w-[1440px] bg-navdark rounded-[32px] p-2 sm:p-3.5 shadow-2xl border border-neutral-800 flex flex-col">
+
+    <!-- TOP NAVIGATION BAR (#141414) -->
+    <header class="w-full px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 text-white">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/15 shadow-inner">
+          <span class="text-xl">🩺</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-xl tracking-tight text-white">MedBento</span>
+            <span class="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-clinica-bg text-clinica-text">Residência</span>
+          </div>
+          <p class="text-xs text-neutral-400 hidden sm:block">Caderno de Erros Ativo & Repetição Espaçada</p>
+        </div>
+      </div>
+
+      <!-- Center Navigation Tabs -->
+      <nav class="flex items-center bg-neutral-900/90 p-1.5 rounded-full border border-white/10 order-3 lg:order-2 w-full lg:w-auto justify-center">
+        <button id="tabBtnErros" onclick="switchTab('erros')" class="flex items-center gap-2.5 px-5 py-2 rounded-full text-sm font-semibold transition-all bg-white text-navdark shadow-sm">
+          <i class="ph-fill ph-notebook text-lg"></i>
+          <span>Caderno de Erros</span>
+          <span id="navBadgeErros" class="px-2 py-0.5 text-xs rounded-full bg-neutral-900 text-white font-bold">5</span>
+        </button>
+
+        <button id="tabBtnFlashcards" onclick="switchTab('flashcards')" class="flex items-center gap-2.5 px-5 py-2 rounded-full text-sm font-semibold transition-all text-neutral-400 hover:text-white">
+          <i class="ph-fill ph-cards text-lg"></i>
+          <span>Flashcards SRS</span>
+          <span id="navBadgeDue" class="px-2 py-0.5 text-xs rounded-full bg-[#DDF3DC] text-[#14532D] font-bold">5 hoje</span>
+        </button>
+      </nav>
+
+      <!-- Right Actions & User Profile -->
+      <div class="flex items-center gap-2.5 order-2 lg:order-3">
+        <button onclick="openErrorModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#DDF3DC] hover:bg-[#c8ecc6] text-[#14532D] font-bold text-sm transition-all shadow-sm active:scale-95">
+          <i class="ph-bold ph-plus-circle text-lg"></i>
+          <span>Novo Erro</span>
+        </button>
+
+        <button onclick="resetDemoData()" title="Restaurar exemplos originais" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-neutral-300 hover:text-white transition">
+          <i class="ph ph-arrow-counter-clockwise text-lg"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN INNER CANVAS (#F8F9F7) -->
+    <main class="w-full bg-canvas rounded-[26px] min-h-[84vh] p-4 sm:p-6 lg:p-8 text-ink relative overflow-hidden">
+
+      <!-- ========================================================= -->
+      <!-- VIEW 1: CADERNO DE ERROS                                  -->
+      <!-- ========================================================= -->
+      <section id="viewErros" class="space-y-7">
+
+        <!-- TOP HEADER + BENTO METRICS ROW -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          
+          <!-- Left Title & Quick Search Card -->
+          <div class="lg:col-span-5 bg-white rounded-bento p-6 shadow-bento border border-neutral-200/60 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2.5">
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">Meu Caderno de Erros</h1>
+                <span class="text-2xl">🕰️</span>
+              </div>
+              <p class="text-sm text-muted mt-1">Transforme cada questão errada em uma regra de ouro permanente.</p>
+            </div>
+
+            <!-- Search Bar inside Hero Card -->
+            <div class="mt-5 relative">
+              <i class="ph ph-magnifying-glass text-lg text-neutral-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+              <input 
+                id="searchInput"
+                type="text" 
+                oninput="renderErrorsView()"
+                placeholder="Buscar por tema, conceito, banca (ex: USP, Pré-eclâmpsia)..." 
+                class="w-full pl-11 pr-10 py-3 rounded-full bg-[#F3F4F1] hover:bg-[#EAECE7] focus:bg-white text-sm text-ink placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-navdark transition"
+              />
+              <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-ink">
+                <i class="ph-fill ph-x-circle text-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- 3 Bento Metric Blocks (Inspired by 26 Total / 2 Completed / 23 Upcoming) -->
+          <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            
+            <!-- Metric 1: Total de Erros (Ice Blue) -->
+            <div class="bg-clinica-bg rounded-bento p-5 border border-clinica-border/70 flex flex-col justify-between relative overflow-hidden bento-card">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-clinica-text/80">Total Registrado</span>
+                <div class="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center text-clinica-accent shadow-sm">
+                  <i class="ph-bold ph-notebook text-base"></i>
+                </div>
+              </div>
+              <div class="my-2">
+                <span id="metricTotalErros" class="text-4xl sm:text-5xl font-extrabold text-ink tracking-tight">5</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-semibold text-clinica-text">
+                <span>Nas 5 grandes áreas</span>
+                <span id="metricRecorrentesBadge" class="px-2 py-0.5 rounded-full bg-white/70 text-clinica-text">1 recorrente</span>
+              </div>
+            </div>
+
+            <!-- Metric 2: Conceitos Solidificados (Mint Green with 🎉) -->
+            <div class="bg-cirurgia-bg rounded-bento p-5 border border-cirurgia-border/80 flex flex-col justify-between relative overflow-hidden bento-card">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-cirurgia-text/80">Solidificados</span>
+                <span class="text-2xl select-none" title="Conceitos dominados!">🎉</span>
+              </div>
+              <div class="my-2">
+                <span id="metricSolidificados" class="text-4xl sm:text-5xl font-extrabold text-ink tracking-tight">2</span>
+              </div>
+              <div class="flex items-center gap-1.5 text-xs font-semibold text-cirurgia-text">
+                <i class="ph-fill ph-check-circle text-sm"></i>
+                <span id="metricCardsGeradosText">5 viraram flashcards</span>
+              </div>
+            </div>
+
+            <!-- Metric 3: Cards para Revisar Hoje (Dashed Border Card) -->
+            <div onclick="switchTab('flashcards')" class="cursor-pointer bg-white/70 hover:bg-white rounded-bento p-5 border-2 border-dashed border-neutral-300 hover:border-navdark flex flex-col justify-between bento-card group">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-muted">Revisar Hoje</span>
+                <div class="w-8 h-8 rounded-full bg-pediatria-bg flex items-center justify-center text-pediatria-accent group-hover:scale-110 transition">
+                  <i class="ph-bold ph-lightning text-base"></i>
+                </div>
+              </div>
+              <div class="my-2 flex items-baseline gap-2">
+                <span id="metricDueToday" class="text-4xl sm:text-5xl font-extrabold text-ink tracking-tight">5</span>
+                <span class="text-xs font-semibold text-muted">pendentes</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-bold text-ink group-hover:translate-x-1 transition">
+                <span>Iniciar revisão ativa</span>
+                <i class="ph-bold ph-arrow-right"></i>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- FILTER BAR: 5 SPECIALTIES CHIPS + ERROR REASON CHIPS -->
+        <div class="bg-white rounded-bento p-4 sm:p-5 shadow-bento border border-neutral-200/60 space-y-3.5">
+          <!-- Specialty Pills -->
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2" id="specialtyFilterContainer">
+              <!-- Populated dynamically via JS -->
+            </div>
+
+            <!-- Reason Filter Select / Pills -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-muted hidden sm:inline">Diagnóstico:</span>
+              <select id="reasonFilterSelect" onchange="renderErrorsView()" class="px-3.5 py-2 rounded-full bg-[#F3F4F1] text-xs font-bold text-ink border border-transparent focus:border-navdark focus:outline-none cursor-pointer">
+                <option value="TODOS">Todos os motivos de erro</option>
+                <option value="Lacuna Teórica">🧠 Lacuna Teórica</option>
+                <option value="Pegadinha">🪤 Pegadinha / Distrator</option>
+                <option value="Confusão de Conduta">⚖️ Confusão de Conduta</option>
+                <option value="Desatenção">⚡ Desatenção / Leitura</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN CONTENT GRID: BENTO ERROR CARDS (LEFT 8 COLS) + DIAGNOSTIC INSIGHTS SIDEBAR (RIGHT 4 COLS) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- Error Cards List (8 cols) -->
+          <div class="lg:col-span-8 space-y-4" id="errorsGridContainer">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Right Sidebar: Painel de Diagnóstico por Área & Dicas (4 cols, inspired by "My Events" column in screenshot) -->
+          <aside class="lg:col-span-4 space-y-5 sticky top-6">
+            <div class="bg-white rounded-bento p-6 shadow-bento border border-neutral-200/60 space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h2 class="text-xl font-extrabold text-ink">Radar das 5 Áreas</h2>
+                  <span class="text-xl">🧐</span>
+                </div>
+                <span class="text-xs font-bold text-muted uppercase">Distribuição</span>
+              </div>
+              <p class="text-xs text-muted">Clique em uma grande área para filtrar seus erros registrados ou iniciar um bloco de flashcards.</p>
+
+              <!-- 5 Pastel Mini Summary Cards -->
+              <div id="sidebarSpecialtyRadar" class="space-y-3">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+
+            <!-- Floating tilted tip card inspired by bottom-right green tilted card in reference image -->
+            <div class="bg-cirurgia-bg border border-cirurgia-border rounded-bento p-5 shadow-bento transform -rotate-1 hover:rotate-0 transition duration-300">
+              <div class="flex items-center justify-between text-xs font-bold text-cirurgia-text mb-2">
+                <span class="flex items-center gap-1.5"><i class="ph-fill ph-push-pin"></i> Fluxo de Retenção</span>
+                <span>Dica de Ouro</span>
+              </div>
+              <p class="text-xs text-ink font-medium leading-relaxed">
+                Sempre que você marcar <strong>"Errei (1d)"</strong> durante a revisão de um Flashcard, o contador de <strong>Recorrência</strong> sobe automaticamente aqui no seu Caderno de Erros!
+              </p>
+            </div>
+          </aside>
+
+        </div>
+
+      </section>
+
+
+      <!-- ========================================================= -->
+      <!-- VIEW 2: FLASHCARDS (GERADOR & REVISÃO ATIVA SRS)          -->
+      <!-- ========================================================= -->
+      <section id="viewFlashcards" class="hidden space-y-7">
+
+        <!-- Header & Deck Selector Bar -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white rounded-bento p-6 shadow-bento border border-neutral-200/60">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">Flashcards & Repetição Espaçada</h1>
+              <span class="text-2xl">⚡</span>
+            </div>
+            <p class="text-sm text-muted mt-1">Estude os cartões gerados diretamente das suas análises de erro e conceitos solidificados.</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button onclick="openGeneratorWithoutError()" class="px-4 py-2.5 rounded-full bg-[#F3F4F1] hover:bg-neutral-200 text-ink font-bold text-xs sm:text-sm flex items-center gap-2 transition">
+              <i class="ph-bold ph-sparkle text-base"></i>
+              <span>Gerar de um Erro do Caderno</span>
+            </button>
+            <button onclick="resetAllCardsDueNow()" class="px-4 py-2.5 rounded-full bg-navdark hover:bg-neutral-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition">
+              <i class="ph-bold ph-arrows-clockwise text-base"></i>
+              <span>Liberar Todos para Revisão</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5 SPECIALTY DECKS BENTO GRID -->
+        <div id="decksBentoGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
+          <!-- Populated dynamically by JS (All + 5 specialties) -->
+        </div>
+
+        <!-- ACTIVE FLASHCARD PLAYER + ALL CARDS MANAGEMENT -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          <!-- Left 7 Cols: Interactive Flashcard Study Arena -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="flex items-center justify-between px-1">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <h2 class="text-sm font-extrabold uppercase tracking-wider text-muted" id="activeDeckTitle">Estudando: Todas as Especialidades</h2>
+              </div>
+              <span id="reviewCounterText" class="text-xs font-bold px-3 py-1 rounded-full bg-white border border-neutral-200">Card 1 de 5</span>
+            </div>
+
+            <!-- FLASHCARD CONTAINER -->
+            <div id="flashcardStage" class="w-full">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Right 5 Cols: Lista de Cartões do Baralho & Conversão Rápida -->
+          <div class="lg:col-span-5 bg-white rounded-bento p-6 shadow-bento border border-neutral-200/60 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-extrabold text-ink">Cartões neste Baralho</h3>
+                <p class="text-xs text-muted">Clique em qualquer cartão para carregá-lo no player ao lado.</p>
+              </div>
+              <span id="deckTotalBadge" class="px-3 py-1 rounded-full bg-[#F3F4F1] text-xs font-extrabold text-ink">5 cards</span>
+            </div>
+
+            <div id="deckCardsList" class="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 1: REGISTRAR / EDITAR ERRO NO CADERNO (4 PASSOS)     -->
+  <!-- ========================================================= -->
+  <div id="errorModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="bg-canvas w-full max-w-3xl rounded-[28px] shadow-floating border border-white/20 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="bg-navdark text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-[#DDF3DC] text-[#14532D] flex items-center justify-center font-extrabold">
+            <i class="ph-bold ph-notebook text-lg"></i>
+          </div>
+          <div>
+            <h3 id="errorModalTitle" class="font-extrabold text-lg leading-tight">Novo Registro no Caderno de Erros</h3>
+            <p class="text-xs text-neutral-400">Diagnóstico rápido em 4 passos • Menos de 60 segundos</p>
+          </div>
+        </div>
+        <button onclick="closeErrorModal()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-neutral-300 hover:text-white transition">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (4 Steps) -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        <input type="hidden" id="formErrorId" value="" />
+
+        <!-- PASSO 1: ESPECIALIDADE & SUBTEMA -->
+        <div class="bg-white rounded-bento p-5 border border-neutral-200/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-navdark text-white">Passo 1 • Grande Área & Tópico</span>
+            <span class="text-xs text-muted font-medium">Obrigatório</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-muted mb-2">Selecione a Especialidade da Questão:</label>
+            <div id="modalSpecialtyChips" class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-bold text-muted mb-1">Subtema / Assunto Específico *</label>
+              <input id="formSubtema" type="text" placeholder="Ex: Pré-eclâmpsia, Trauma Abdominal, Cetoacidose..." class="w-full px-4 py-2.5 rounded-xl bg-[#F3F4F1] focus:bg-white text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-navdark" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-muted mb-1">Banca / Instituição & Ano (Opcional)</label>
+              <input id="formBanca" type="text" placeholder="Ex: USP-SP 2026, ENARE, SUS-BA..." class="w-full px-4 py-2.5 rounded-xl bg-[#F3F4F1] focus:bg-white text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-navdark" />
+            </div>
+          </div>
+        </div>
+
+        <!-- PASSO 2: ENUNCIADO DA QUESTÃO (OPCIONAL / EXPANSÍVEL) -->
+        <div class="bg-white rounded-bento p-5 border border-neutral-200/80 shadow-sm space-y-3">
+          <div class="flex items-center justify-between cursor-pointer" onclick="toggleEnunciadoCollapse()">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-neutral-200 text-ink">Passo 2 • Enunciado ou Print</span>
+              <span class="text-xs text-muted font-semibold">(Opcional)</span>
+            </div>
+            <button type="button" class="text-xs font-bold text-ink flex items-center gap-1 hover:underline">
+              <span id="enunciadoToggleLabel">Expandir / Colar Questão</span>
+              <i id="enunciadoToggleIcon" class="ph-bold ph-caret-down"></i>
+            </button>
+          </div>
+
+          <div id="enunciadoCollapsible" class="space-y-3 pt-2">
+            <textarea id="formEnunciado" rows="3" placeholder="Cole aqui o caso clínico ou trecho do enunciado da questão que você errou..." class="w-full p-3.5 rounded-xl bg-[#F3F4F1] focus:bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-navdark"></textarea>
+            
+            <!-- Print / Image Upload -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <label class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F3F4F1] hover:bg-neutral-200 text-xs font-bold text-ink cursor-pointer transition">
+                <i class="ph-bold ph-image text-base"></i>
+                <span>Anexar Print da Questão</span>
+                <input type="file" id="formImagemInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
+              </label>
+              <div id="imagePreviewContainer" class="hidden flex items-center gap-2 bg-neutral-100 px-3 py-1.5 rounded-xl">
+                <img id="formImagePreview" src="" alt="Preview" class="h-10 w-14 object-cover rounded-lg border border-neutral-300" />
+                <button type="button" onclick="clearImageAttachment()" class="text-xs font-bold text-red-600 hover:underline">Remover</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASSO 3: ANÁLISE DO ERRO (ONDE EU FALHEI?) -->
+        <div class="bg-white rounded-bento p-5 border border-neutral-200/80 shadow-sm space-y-3.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-preventiva-bg text-preventiva-text">Passo 3 • Análise do Erro (Metacognição)</span>
+            <span class="text-xs text-muted font-medium">Por que eu errei?</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-muted mb-2">Classifique o motivo principal da falha:</label>
+            <div id="modalReasonChips" class="flex flex-wrap gap-2">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-muted mb-1">Onde caí / Qual distrator me confundiu? *</label>
+            <textarea id="formAnalise" rows="2" placeholder="Ex: Achei que precisava esperar proteinúria de 24h para fechar diagnóstico de pré-eclâmpsia grave..." class="w-full p-3.5 rounded-xl bg-[#F3F4F1] focus:bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-navdark"></textarea>
+          </div>
+        </div>
+
+        <!-- PASSO 4: CONCEITO A SOLIDIFICAR (REGRA DE OURO) -->
+        <div class="bg-pediatria-bg/80 rounded-bento p-5 border-2 border-pediatria-border shadow-sm space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-navdark text-white flex items-center gap-1.5">
+              <i class="ph-fill ph-lightbulb text-amber-300"></i>
+              <span>Passo 4 • Conceito a Solidificar (Regra de Ouro)</span>
+            </span>
+            <span class="text-xs font-bold text-pediatria-text">Vai para o Verso do Card!</span>
+          </div>
+          <p class="text-xs text-pediatria-text/90">Escreva de forma direta e acionável o raciocínio para nunca mais errar uma questão semelhante:</p>
+          <textarea id="formConceito" rows="3" placeholder="Ex: Na gestante hipertensa (>20 sem), plaquetas < 100.000, Cr > 1,1 ou sinais de iminência de eclâmpsia já fecham Pré-Eclâmpsia COM gravidade mesmo SEM proteinúria. Conduta: Sulfato de Magnésio!" class="w-full p-3.5 rounded-xl bg-white text-sm font-semibold text-ink border border-pediatria-border focus:outline-none focus:ring-2 focus:ring-navdark"></textarea>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer Actions -->
+      <div class="bg-white px-6 py-4 border-t border-neutral-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <button type="button" onclick="closeErrorModal()" class="px-5 py-2.5 rounded-full text-sm font-bold text-muted hover:bg-neutral-100 transition">
+          Cancelar
+        </button>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button type="button" onclick="saveErrorEntry(false)" class="px-5 py-2.5 rounded-full bg-[#F3F4F1] hover:bg-neutral-200 text-ink font-bold text-sm transition">
+            Salvar no Caderno
+          </button>
+          <button type="button" onclick="saveErrorEntry(true)" class="px-6 py-2.5 rounded-full bg-navdark hover:bg-neutral-800 text-white font-bold text-sm flex items-center gap-2 shadow-md transition active:scale-95">
+            <i class="ph-fill ph-cards text-lg text-[#DDF3DC]"></i>
+            <span>Salvar + Gerar Flashcard</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 2: GERADOR DE FLASHCARD (3 MODOS INTELIGENTES)       -->
+  <!-- ========================================================= -->
+  <div id="generatorModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="bg-canvas w-full max-w-3xl rounded-[28px] shadow-floating border border-white/20 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      
+      <!-- Header -->
+      <div class="bg-navdark text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-[#F0D9FA] text-[#581C87] flex items-center justify-center font-extrabold">
+            <i class="ph-bold ph-sparkle text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-lg leading-tight">Gerador de Flashcard a partir do Erro</h3>
+            <p class="text-xs text-neutral-400">Transforme seu conceito solidificado em memória ativa sem retrabalho</p>
+          </div>
+        </div>
+        <button onclick="closeGeneratorModal()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-neutral-300 hover:text-white transition">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        
+        <!-- Source Error Selector -->
+        <div class="bg-white rounded-2xl p-4 border border-neutral-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex-1">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-muted mb-1">Erro de Origem no Caderno:</label>
+            <select id="genSourceErrorSelect" onchange="populateGeneratorFromSelectedError()" class="w-full px-3.5 py-2 rounded-xl bg-[#F3F4F1] text-sm font-bold text-ink focus:outline-none">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+          <div id="genSpecialtyBadgePreview" class="shrink-0"></div>
+        </div>
+
+        <!-- 3 MODE TABS -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-white p-2 rounded-2xl border border-neutral-200">
+          <button type="button" id="modeBtnDirect" onclick="setGeneratorMode('direta')" class="p-3 rounded-xl text-left transition border-2 border-navdark bg-navdark text-white">
+            <div class="flex items-center justify-between font-extrabold text-xs mb-0.5">
+              <span>1. Conversão Direta</span>
+              <i class="ph-fill ph-lightning"></i>
+            </div>
+            <p class="text-[11px] opacity-80">Verso pronto; crie apenas a pergunta direta.</p>
+          </button>
+
+          <button type="button" id="modeBtnCloze" onclick="setGeneratorMode('cloze')" class="p-3 rounded-xl text-left transition border-2 border-transparent hover:bg-neutral-100 text-ink">
+            <div class="flex items-center justify-between font-extrabold text-xs mb-0.5">
+              <span>2. Omissão (Cloze)</span>
+              <i class="ph-fill ph-brackets-square"></i>
+            </div>
+            <p class="text-[11px] text-muted">Oculte palavras-chave com <code class="font-bold">[...]</code>.</p>
+          </button>
+
+          <button type="button" id="modeBtnAI" onclick="setGeneratorMode('ia')" class="p-3 rounded-xl text-left transition border-2 border-transparent hover:bg-neutral-100 text-ink">
+            <div class="flex items-center justify-between font-extrabold text-xs mb-0.5">
+              <span>3. Síntese Inteligente</span>
+              <i class="ph-fill ph-magic-wand"></i>
+            </div>
+            <p class="text-[11px] text-muted">Gera mini-caso clínico + resposta estruturada.</p>
+          </button>
+        </div>
+
+        <!-- Cloze Helper Toolbar (Visible in Cloze mode or anytime user wants to wrap terms) -->
+        <div id="clozeToolbar" class="bg-go-bg/70 border border-go-border rounded-2xl p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-extrabold text-go-text flex items-center gap-1.5">
+              <i class="ph-fill ph-selection-plus text-base"></i>
+              <span>Ferramenta de Omissão de Palavras (Cloze Deletion)</span>
+            </span>
+            <button type="button" onclick="wrapSelectionInCloze()" class="px-3.5 py-1.5 rounded-full bg-navdark text-white text-xs font-bold hover:bg-neutral-800 transition shadow-sm">
+              Ocultar texto selecionado com [...]
+            </button>
+          </div>
+          <p class="text-xs text-go-text/90">
+            Dica: Selecione qualquer palavra, valor de corte ou conduta na caixa <strong>Frente do Cartão</strong> abaixo e clique no botão acima (ou clique nos termos sugeridos):
+          </p>
+          <div id="quickClozeChips" class="flex flex-wrap gap-1.5 pt-1">
+            <!-- Quick clickable terms extracted from the concept -->
+          </div>
+        </div>
+
+        <!-- FRONT & BACK EDITORS -->
+        <div class="space-y-4">
+          <div class="bg-white rounded-bento p-5 border border-neutral-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-extrabold uppercase tracking-wider text-ink">Frente do Flashcard (Pergunta / Gatilho ou Frase Cloze)</label>
+              <button type="button" onclick="applyAISynthesis()" class="text-xs font-bold text-purple-700 hover:underline flex items-center gap-1">
+                <i class="ph-fill ph-sparkle"></i> Gerar pergunta clínica automática
+              </button>
+            </div>
+            <textarea id="genFrontInput" rows="3" class="w-full p-3.5 rounded-xl bg-[#F3F4F1] focus:bg-white text-sm font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-navdark" placeholder="Digite a pergunta gatilho ou use {{c1::termo}} para ocultar palavras..."></textarea>
+          </div>
+
+          <div class="bg-white rounded-bento p-5 border border-neutral-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-extrabold uppercase tracking-wider text-ink">Verso do Flashcard (Conceito a Solidificar + Âncora)</label>
+              <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">Puxado automaticamente do Caderno</span>
+            </div>
+            <textarea id="genBackInput" rows="3" class="w-full p-3.5 rounded-xl bg-[#F3F4F1] focus:bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-navdark"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="bg-white px-6 py-4 border-t border-neutral-200 flex items-center justify-between gap-3 shrink-0">
+        <button type="button" onclick="closeGeneratorModal()" class="px-5 py-2.5 rounded-full text-sm font-bold text-muted hover:bg-neutral-100 transition">
+          Cancelar
+        </button>
+        <button type="button" onclick="saveGeneratedFlashcard()" class="px-6 py-2.5 rounded-full bg-navdark hover:bg-neutral-800 text-white font-bold text-sm flex items-center gap-2 shadow-md transition active:scale-95">
+          <i class="ph-bold ph-check-circle text-lg text-[#DDF3DC]"></i>
+          <span>Criar Flashcard no Baralho</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ========================================================= -->
+  <!-- APPLICATION LOGIC & PRE-LOADED MEDICAL DATA               -->
+  <!-- ========================================================= -->
+  <script>
+    // 5 Medical Specialties Configuration (Exact Pastel Minimalism Palette)
+    const SPECIALTIES = {
+      'Clínica Médica': {
+        id: 'Clínica Médica',
+        short: 'Clínica Médica',
+        icon: '🫀',
+        bg: '#E2F1F8',
+        border: '#BAE0F3',
+        accent: '#0284C7',
+        text: '#0C4A6E',
+        tailwindBg: 'bg-clinica-bg',
+        tailwindBorder: 'border-clinica-border',
+        tailwindText: 'text-clinica-text'
+      },
+      'Ginecologia e Obstetrícia': {
+        id: 'Ginecologia e Obstetrícia',
+        short: 'Gineco e Obstetrícia',
+        icon: '🤰',
+        bg: '#F0D9FA',
+        border: '#E2B6F7',
+        accent: '#9333EA',
+        text: '#581C87',
+        tailwindBg: 'bg-go-bg',
+        tailwindBorder: 'border-go-border',
+        tailwindText: 'text-go-text'
+      },
+      'Cirurgia Geral': {
+        id: 'Cirurgia Geral',
+        short: 'Cirurgia Geral',
+        icon: '🔪',
+        bg: '#DDF3DC',
+        border: '#B8E6B5',
+        accent: '#16A34A',
+        text: '#14532D',
+        tailwindBg: 'bg-cirurgia-bg',
+        tailwindBorder: 'border-cirurgia-border',
+        tailwindText: 'text-cirurgia-text'
+      },
+      'Pediatria': {
+        id: 'Pediatria',
+        short: 'Pediatria',
+        icon: '🧸',
+        bg: '#FDF3D0',
+        border: '#F9E295',
+        accent: '#D97706',
+        text: '#713F12',
+        tailwindBg: 'bg-pediatria-bg',
+        tailwindBorder: 'border-pediatria-border',
+        tailwindText: 'text-pediatria-text'
+      },
+      'Preventiva': {
+        id: 'Preventiva',
+        short: 'Preventiva',
+        icon: '📊',
+        bg: '#FCE4D8',
+        border: '#F7C6AE',
+        accent: '#EA580C',
+        text: '#7C2D12',
+        tailwindBg: 'bg-preventiva-bg',
+        tailwindBorder: 'border-preventiva-border',
+        tailwindText: 'text-preventiva-text'
+      }
+    };
+
+    const ERROR_REASONS = [
+      { id: 'Lacuna Teórica', icon: '🧠', label: 'Lacuna Teórica' },
+      { id: 'Pegadinha', icon: '🪤', label: 'Pegadinha / Distrator' },
+      { id: 'Confusão de Conduta', icon: '⚖️', label: 'Confusão de Conduta' },
+      { id: 'Desatenção', icon: '⚡', label: 'Desatenção / Leitura' }
+    ];
+
+    // Pre-loaded High-Yield Medical Residency Errors (1 for each of the 5 areas)
+    const INITIAL_ERRORS = [
+      {
+        id: 'err-go-1',
+        especialidade: 'Ginecologia e Obstetrícia',
+        subtema: 'Pré-eclâmpsia com Sinais de Gravidade',
+        banca: 'USP-SP 2025',
+        enunciado: 'Primigesta de 32 semanas procura pronto-socorro com cefaleia occipital intensa e escotomas cintilantes. PA: 155x105 mmHg. Lab: Plaquetas 88.000/mm³, Creatinina 1,3 mg/dL, TGO 92 U/L. Fita urinária sem proteinúria. Qual o diagnóstico e a conduta imediata?',
+        imagem: '',
+        motivo: 'Pegadinha',
+        analise: 'Marquei hipertensão gestacional porque a fita urinária veio negativa para proteinúria e esqueci que disfunção de órgão-alvo já define pré-eclâmpsia grave.',
+        conceito: 'Proteinúria NÃO é obrigatória para o diagnóstico de Pré-eclâmpsia! Na presença de PA ≥ 140x90 após 20 sem + Plaquetas < 100.000, Cr > 1,1, Edema Agudo de Pulmão ou sintomas cerebrais/visuais, fecha-se Pré-eclâmpsia COM Sinais de Gravidade. Conduta imediata: Sulfato de Magnésio!',
+        recorrencia: 2,
+        solidificado: false,
+        criadoEm: '10/11/2026'
+      },
+      {
+        id: 'err-clin-1',
+        especialidade: 'Clínica Médica',
+        subtema: 'Cetoacidose Diabética (CAD) — Manejo do Potássio',
+        banca: 'UNICAMP 2025',
+        enunciado: 'Paciente 22 anos, DM1, chega confuso, desidratado, respiração de Kussmaul. Glicemia 480 mg/dL, pH 7,12, HCO3 8 mEq/L, Potássio sérico = 3,1 mEq/L. Após expansão volêmica inicial com SF 0,9%, qual a próxima conduta obrigatória?',
+        imagem: '',
+        motivo: 'Confusão de Conduta',
+        analise: 'Iniciei insulina regular EV em bomba imediatamente junto com a hidratação, esquecendo de olhar o nível crítico do potássio antes.',
+        conceito: 'Na Cetoacidose Diabética, se o Potássio sérico inicial for < 3,3 mEq/L, é PROIBIDO iniciar insulina! Primeiro faz-se hidratação + reposição de K+ até atingir K > 3,3 mEq/L, evitando arritmia fatal por hipocalemia grave.',
+        recorrencia: 1,
+        solidificado: true,
+        criadoEm: '09/11/2026'
+      },
+      {
+        id: 'err-cir-1',
+        especialidade: 'Cirurgia Geral',
+        subtema: 'Trauma Abdominal Fechado com Instabilidade',
+        banca: 'SUS-SP 2026',
+        enunciado: 'Homem vítima de colisão automobilística dá entrada com PA 75x40 mmHg, FC 138 bpm, abdome distendido. Realizado FAST na sala de trauma que evidenciou líquido livre na janela esplenorrenal e pelve. Qual a conduta imediata?',
+        imagem: '',
+        motivo: 'Desatenção',
+        analise: 'Marquei Tomografia de Abdome com contraste por hábito de querer estadiar a lesão esplênica, ignorando que o paciente estava hemodinamicamente instável.',
+        conceito: 'Paciente politraumatizado com Trauma Abdominal Fechado + Instabilidade Hemodinâmica + FAST Positivo tem indicação imediata de Laparotomia Exploradora! Tomografia ("tubo da morte") só é feita em pacientes ESTÁVEIS.',
+        recorrencia: 1,
+        solidificado: true,
+        criadoEm: '08/11/2026'
+      },
+      {
+        id: 'err-ped-1',
+        especialidade: 'Pediatria',
+        subtema: 'Icterícia Neonatal Precoce vs. Fisiológica',
+        banca: 'ENARE 2025',
+        enunciado: 'Recém-nascido a termo, parto vaginal sem intercorrências, apresenta icterícia visível até zona II de Kramer com 16 horas de vida. Mãe tipagem O positivo, RN tipagem A positivo, Coombs direto negativo. Qual a principal hipótese e conduta?',
+        imagem: '',
+        motivo: 'Lacuna Teórica',
+        analise: 'Descartei incompatibilidade ABO porque o Coombs Direto veio negativo e marquei alta com orientação de banho de sol.',
+        conceito: 'Toda icterícia que surge nas primeiras 24 horas de vida (< 24h) é SEMPRE PATOLÓGICA! Na incompatibilidade ABO (mãe O / RN A ou B), o teste de Coombs Direto pode ser negativo em até 50% dos casos. Conduta: Fototerapia imediata e investigação.',
+        recorrencia: 1,
+        solidificado: false,
+        criadoEm: '07/11/2026'
+      },
+      {
+        id: 'err-prev-1',
+        especialidade: 'Preventiva',
+        subtema: 'Propriedades dos Testes Diagnósticos (VPP e Prevalência)',
+        banca: 'UNIFESP 2025',
+        enunciado: 'Um mesmo teste rápido para Dengue (Sensibilidade 90%, Especificidade 95%) é aplicado em duas cidades: Cidade A (surto epidêmico com alta prevalência) e Cidade B (endêmica com baixíssima prevalência). O que acontece com os parâmetros na Cidade A?',
+        imagem: '',
+        motivo: 'Pegadinha',
+        analise: 'Confundi achando que a sensibilidade do kit aumentava durante uma epidemia.',
+        conceito: 'Sensibilidade e Especificidade são características intrínsecas do teste e NÃO variam com a prevalência! Quando a Prevalência aumenta, o Valor Preditivo Positivo (VPP) AUMENTA e o Valor Preditivo Negativo (VPN) diminui.',
+        recorrencia: 1,
+        solidificado: false,
+        criadoEm: '06/11/2026'
+      }
+    ];
+
+    const INITIAL_FLASHCARDS = [
+      {
+        id: 'card-go-1',
+        errorId: 'err-go-1',
+        especialidade: 'Ginecologia e Obstetrícia',
+        subtema: 'Pré-eclâmpsia com Sinais de Gravidade',
+        modo: 'cloze',
+        frente: 'Na gestante hipertensa (>20 sem), plaquetas < {{c1::100.000}}, Cr > {{c1::1,1 mg/dL}} ou sintomas visuais/cerebrais fecham diagnóstico de Pré-eclâmpsia Grave mesmo sem {{c1::proteinúria}}. Conduta: {{c1::Sulfato de Magnésio}}.',
+        verso: 'Proteinúria NÃO é obrigatória para o diagnóstico de Pré-eclâmpsia! Plaquetas < 100.000, Cr > 1,1, EAP ou iminência de eclâmpsia já exigem Sulfato de Magnésio imediato.',
+        analiseLembrete: 'Não esperar proteinúria quando já houver disfunção de órgão-alvo!',
+        intervaloDias: 1,
+        dueToday: true,
+        revisoes: 2
+      },
+      {
+        id: 'card-clin-1',
+        errorId: 'err-clin-1',
+        especialidade: 'Clínica Médica',
+        subtema: 'Cetoacidose Diabética (CAD) — Manejo do Potássio',
+        modo: 'direta',
+        frente: 'Paciente em Cetoacidose Diabética (CAD) apresenta Potássio sérico inicial de 3,1 mEq/L. Qual a regra obrigatória antes de iniciar a insulinoterapia?',
+        verso: 'Se K+ < 3,3 mEq/L, é PROIBIDO iniciar insulina! Deve-se suspender/adiar a insulina e repor potássio junto à hidratação até o K+ superar 3,3 mEq/L (evita arritmia fatal).',
+        analiseLembrete: 'Olhar sempre o K+ antes de ligar a bomba de insulina regular.',
+        intervaloDias: 4,
+        dueToday: true,
+        revisoes: 3
+      },
+      {
+        id: 'card-cir-1',
+        errorId: 'err-cir-1',
+        especialidade: 'Cirurgia Geral',
+        subtema: 'Trauma Abdominal Fechado com Instabilidade',
+        modo: 'cloze',
+        frente: 'Trauma abdominal fechado + Paciente {{c1::instável hemodinamicamente}} + FAST Positivo = Indicação imediata de {{c1::Laparotomia Exploradora}} (nunca levar para TC!).',
+        verso: 'Paciente politraumatizado instável com FAST positivo vai direto para o centro cirúrgico (Laparotomia Exploradora). Tomografia exige estabilidade hemodinâmica.',
+        analiseLembrete: 'Instabilidade hemodinâmica contraindica transporte para a Tomografia.',
+        intervaloDias: 7,
+        dueToday: true,
+        revisoes: 4
+      },
+      {
+        id: 'card-ped-1',
+        errorId: 'err-ped-1',
+        especialidade: 'Pediatria',
+        subtema: 'Icterícia Neonatal Precoce vs. Fisiológica',
+        modo: 'ia',
+        frente: 'RN a termo apresenta icterícia zona II com 16h de vida (Mãe O+ / RN A+, Coombs Direto negativo). A icterícia é fisiológica? O Coombs negativo exclui incompatibilidade ABO?',
+        verso: '1) NÃO! Toda icterícia < 24h de vida é PATOLÓGICA.\n2) NÃO! Na incompatibilidade ABO, o Coombs Direto pode ser negativo em até 50% dos casos.\nConduta: Fototerapia e investigação.',
+        analiseLembrete: 'Coombs direto negativo nunca descarta incompatibilidade ABO.',
+        intervaloDias: 1,
+        dueToday: true,
+        revisoes: 1
+      },
+      {
+        id: 'card-prev-1',
+        errorId: 'err-prev-1',
+        especialidade: 'Preventiva',
+        subtema: 'Propriedades dos Testes Diagnósticos (VPP e Prevalência)',
+        modo: 'cloze',
+        frente: 'Quando a prevalência de uma doença AUMENTA na população, a Sensibilidade {{c1::não se altera}} e o Valor Preditivo Positivo (VPP) {{c1::aumenta}}.',
+        verso: 'Sensibilidade e Especificidade são intrínsecas ao teste (não mudam com a prevalência). Maior prevalência = Maior VPP e menor VPN.',
+        analiseLembrete: 'Prevalência altera apenas VPP e VPN, nunca Sensibilidade/Especificidade.',
+        intervaloDias: 2,
+        dueToday: true,
+        revisoes: 1
+      }
+    ];
+
+    // Application State
+    let state = {
+      activeTab: 'erros',
+      errors: [],
+      flashcards: [],
+      selectedSpecialtyFilter: 'TODAS',
+      expandedErrorIds: ['err-go-1'], // First card expanded by default to showcase features
+      // Modal Form State
+      modalSelectedSpecialty: 'Clínica Médica',
+      modalSelectedReason: 'Lacuna Teórica',
+      modalImageDataUrl: '',
+      // Flashcard Review State
+      selectedDeckSpecialty: 'TODAS',
+      activeCardIndex: 0,
+      isCardFlipped: false,
+      generatorMode: 'direta'
+    };
+
+    // =========================================================
+    // INITIALIZATION & LOCALSTORAGE
+    // =========================================================
+    function loadAppState() {
+      try {
+        const savedErrors = localStorage.getItem('medbento_errors_v1');
+        const savedCards = localStorage.getItem('medbento_cards_v1');
+        state.errors = savedErrors ? JSON.parse(savedErrors) : [...INITIAL_ERRORS];
+        state.flashcards = savedCards ? JSON.parse(savedCards) : [...INITIAL_FLASHCARDS];
+      } catch (e) {
+        state.errors = [...INITIAL_ERRORS];
+        state.flashcards = [...INITIAL_FLASHCARDS];
+      }
+    }
+
+    function saveAppState() {
+      try {
+        localStorage.setItem('medbento_errors_v1', JSON.stringify(state.errors));
+        localStorage.setItem('medbento_cards_v1', JSON.stringify(state.flashcards));
+      } catch (e) {
+        console.error('Erro ao salvar no localStorage:', e);
+      }
+      updateGlobalCounters();
+    }
+
+    function resetDemoData() {
+      state.errors = JSON.parse(JSON.stringify(INITIAL_ERRORS));
+      state.flashcards = JSON.parse(JSON.stringify(INITIAL_FLASHCARDS));
+      state.selectedSpecialtyFilter = 'TODAS';
+      state.selectedDeckSpecialty = 'TODAS';
+      state.activeCardIndex = 0;
+      state.isCardFlipped = false;
+      saveAppState();
+      renderErrorsView();
+      renderFlashcardsView();
+      showToast('Dados de exemplo das 5 grandes áreas restaurados!', 'sparkles');
+    }
+
+    // =========================================================
+    // NAVIGATION & GLOBAL METRICS
+    // =========================================================
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      const viewErros = document.getElementById('viewErros');
+      const viewFlashcards = document.getElementById('viewFlashcards');
+      const btnErros = document.getElementById('tabBtnErros');
+      const btnFlashcards = document.getElementById('tabBtnFlashcards');
+
+      if (tabName === 'erros') {
+        viewErros.classList.remove('hidden');
+        viewFlashcards.classList.add('hidden');
+        btnErros.className = 'flex items-center gap-2.5 px-5 py-2 rounded-full text-sm font-semibold transition-all bg-white text-navdark shadow-sm';
+        btnFlashcards.className = 'flex items-center gap-2.5 px-5 py-2 rounded-full text-sm font-semibold transition-all text-neutral-400 hover:text-white';
+        renderErrorsView();
+      } else {
+        viewErros.classList.add('hidden');
+        viewFlashcards.classList.remove('hidden');
+        btnFlashcards.className = 'flex items-center gap-2.5 px-5 py-2 rounded-full text-sm font-semibold transition-all bg-white text-navdark shadow-sm';
+        btnErros.className = 'flex items-center gap-2.5 px-5 py-2 rounded-full text-sm font-semibold transition-all text-neutral-400 hover:text-white';
+        renderFlashcardsView();
+      }
+    }
+
+    function updateGlobalCounters() {
+      const totalErros = state.errors.length;
+      const solidificados = state.errors.filter(e => e.solidificado).length;
+      const recorrentes = state.errors.filter(e => (e.recorrencia || 1) > 1).length;
+      const dueCards = state.flashcards.filter(c => c.dueToday).length;
+
+      document.getElementById('navBadgeErros').textContent = totalErros;
+      document.getElementById('navBadgeDue').textContent = `${dueCards} hoje`;
+
+      document.getElementById('metricTotalErros').textContent = totalErros;
+      document.getElementById('metricSolidificados').textContent = solidificados;
+      document.getElementById('metricDueToday').textContent = dueCards;
+      document.getElementById('metricRecorrentesBadge').textContent = `${recorrentes} recorrente${recorrentes === 1 ? '' : 's'}`;
+      document.getElementById('metricCardsGeradosText').textContent = `${state.flashcards.length} cards ativos`;
+    }
+
+    // =========================================================
+    // VIEW 1: CADERNO DE ERROS RENDERING
+    // =========================================================
+    function renderErrorsView() {
+      updateGlobalCounters();
+      renderSpecialtyFilterPills();
+      renderErrorsList();
+      renderSidebarRadar();
+    }
+
+    function renderSpecialtyFilterPills() {
+      const container = document.getElementById('specialtyFilterContainer');
+      const allActive = state.selectedSpecialtyFilter === 'TODAS';
+
+      let html = `
+        <button onclick="setSpecialtyFilter('TODAS')" class="px-4 py-2 rounded-full text-xs font-extrabold transition flex items-center gap-2 ${
+          allActive ? 'bg-navdark text-white shadow-sm' : 'bg-[#F3F4F1] text-muted hover:text-ink'
+        }">
+          <span>Todas as Áreas</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[11px] ${allActive ? 'bg-white/20 text-white' : 'bg-white text-ink'}">${state.errors.length}</span>
+        </button>
+      `;
+
+      Object.values(SPECIALTIES).forEach(spec => {
+        const count = state.errors.filter(e => e.especialidade === spec.id).length;
+        const isActive = state.selectedSpecialtyFilter === spec.id;
+        html += `
+          <button onclick="setSpecialtyFilter('${spec.id}')" 
+            style="background-color: ${isActive ? spec.bg : '#F3F4F1'}; color: ${isActive ? spec.text : '#525252'}; border-color: ${isActive ? spec.accent : 'transparent'}"
+            class="px-3.5 py-2 rounded-full text-xs font-extrabold transition flex items-center gap-1.5 border-2 hover:opacity-90">
+            <span>${spec.icon}</span>
+            <span>${spec.short}</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-white/80 text-[11px] font-extrabold" style="color: ${spec.text}">${count}</span>
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function setSpecialtyFilter(specId) {
+      state.selectedSpecialtyFilter = specId;
+      renderErrorsView();
+    }
+
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      renderErrorsView();
+    }
+
+    function renderErrorsList() {
+      const container = document.getElementById('errorsGridContainer');
+      const searchVal = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+      const reasonVal = document.getElementById('reasonFilterSelect')?.value || 'TODOS';
+      const clearBtn = document.getElementById('clearSearchBtn');
+
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', searchVal.length === 0);
+      }
+
+      const filtered = state.errors.filter(err => {
+        const matchSpec = state.selectedSpecialtyFilter === 'TODAS' || err.especialidade === state.selectedSpecialtyFilter;
+        const matchReason = reasonVal === 'TODOS' || err.motivo === reasonVal;
+        const matchSearch = !searchVal ||
+          err.subtema.toLowerCase().includes(searchVal) ||
+          err.conceito.toLowerCase().includes(searchVal) ||
+          err.analise.toLowerCase().includes(searchVal) ||
+          (err.banca && err.banca.toLowerCase().includes(searchVal)) ||
+          (err.enunciado && err.enunciado.toLowerCase().includes(searchVal));
+        return matchSpec && matchReason && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-bento p-10 text-center border border-neutral-200/70 space-y-3">
+            <div class="w-14 h-14 rounded-2xl bg-[#F3F4F1] mx-auto flex items-center justify-center text-2xl">🔍</div>
+            <h3 class="text-lg font-extrabold text-ink">Nenhum erro encontrado com esses filtros</h3>
+            <p class="text-xs text-muted max-w-md mx-auto">Experimente limpar a busca, trocar a especialidade ou registrar um novo erro do seu simulado.</p>
+            <button onclick="openErrorModal()" class="mt-2 px-5 py-2.5 rounded-full bg-navdark text-white text-xs font-bold">+ Registrar Novo Erro</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(err => {
+        const spec = SPECIALTIES[err.especialidade] || SPECIALTIES['Clínica Médica'];
+        const isExpanded = state.expandedErrorIds.includes(err.id);
+        const linkedCards = state.flashcards.filter(c => c.errorId === err.id);
+        const hasCard = linkedCards.length > 0;
+        const reasonObj = ERROR_REASONS.find(r => r.id === err.motivo) || ERROR_REASONS[0];
+
+        return `
+          <article id="error-card-${err.id}" class="bg-white rounded-bento p-5 sm:p-6 shadow-bento border border-neutral-200/80 bento-card transition-all">
+            
+            <!-- Card Top Metadata Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <!-- Specialty Pill -->
+                <span style="background-color: ${spec.bg}; color: ${spec.text}; border-color: ${spec.border}" class="px-3.5 py-1 rounded-full text-xs font-extrabold border flex items-center gap-1.5">
+                  <span>${spec.icon}</span>
+                  <span>${err.especialidade}</span>
+                </span>
+
+                <!-- Reason Badge -->
+                <span class="px-3 py-1 rounded-full bg-[#F3F4F1] text-ink text-xs font-bold flex items-center gap-1">
+                  <span>${reasonObj.icon}</span>
+                  <span>${err.motivo}</span>
+                </span>
+
+                ${err.banca ? `<span class="px-2.5 py-1 rounded-full bg-neutral-100 text-muted text-[11px] font-bold">${escapeHtml(err.banca)}</span>` : ''}
+              </div>
+
+              <!-- Recurrence & Card Status Badges -->
+              <div class="flex items-center gap-2">
+                ${(err.recorrencia || 1) > 1 ? `
+                  <span class="px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-extrabold flex items-center gap-1" title="Você errou esse conceito mais de uma vez">
+                    <i class="ph-fill ph-warning-circle"></i>
+                    <span>Recorrência: ${err.recorrencia}x</span>
+                  </span>
+                ` : ''}
+
+                ${hasCard ? `
+                  <button onclick="jumpToFlashcardFromError('${err.id}')" class="px-3 py-1 rounded-full bg-cirurgia-bg text-cirurgia-text text-xs font-extrabold flex items-center gap-1 hover:brightness-95 transition">
+                    <i class="ph-fill ph-cards"></i>
+                    <span>Card Criado (${linkedCards.length})</span>
+                  </button>
+                ` : `
+                  <button onclick="openGeneratorForError('${err.id}')" class="px-3 py-1 rounded-full bg-navdark text-white text-xs font-bold flex items-center gap-1 hover:bg-neutral-800 transition">
+                    <i class="ph-bold ph-plus"></i>
+                    <span>Gerar Flashcard</span>
+                  </button>
+                `}
+              </div>
+            </div>
+
+            <!-- Subtema Title -->
+            <div onclick="toggleExpandError('${err.id}')" class="cursor-pointer group">
+              <div class="flex items-start justify-between gap-3">
+                <h3 class="text-lg sm:text-xl font-extrabold text-ink group-hover:text-black transition">
+                  ${escapeHtml(err.subtema)}
+                </h3>
+                <button class="w-8 h-8 rounded-full bg-[#F3F4F1] group-hover:bg-navdark group-hover:text-white flex items-center justify-center shrink-0 transition">
+                  <i class="ph-bold ${isExpanded ? 'ph-caret-up' : 'ph-caret-down'}"></i>
+                </button>
+              </div>
+
+              <!-- Highlighted CONCEITO A SOLIDIFICAR (Always visible in Soft Pastel Box) -->
+              <div style="background-color: ${spec.bg}66; border-color: ${spec.border}" class="mt-3 p-4 rounded-2xl border-l-4 flex items-start gap-3">
+                <div class="w-7 h-7 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm text-base mt-0.5">💡</div>
+                <div class="space-y-1 flex-1">
+                  <div class="text-[11px] font-extrabold uppercase tracking-wider" style="color: ${spec.text}">Conceito a Solidificar (Regra de Ouro)</div>
+                  <p class="text-sm font-semibold text-ink leading-relaxed">${escapeHtml(err.conceito)}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- EXPANDABLE DETAILS: Análise do Erro & Enunciado Original -->
+            <div class="${isExpanded ? 'block' : 'hidden'} mt-4 pt-4 border-t border-dashed border-neutral-200 space-y-3.5">
+              
+              <!-- Análise do Erro -->
+              <div class="bg-[#F8F9F7] rounded-2xl p-4 border border-neutral-200/70">
+                <div class="text-xs font-extrabold uppercase tracking-wider text-preventiva-text mb-1 flex items-center gap-1.5">
+                  <i class="ph-fill ph-magnifying-glass-plus"></i>
+                  <span>Minha Análise do Erro (${err.motivo})</span>
+                </div>
+                <p class="text-sm text-muted leading-relaxed">${escapeHtml(err.analise)}</p>
+              </div>
+
+              <!-- Enunciado (if provided) -->
+              ${err.enunciado ? `
+                <div class="bg-[#F8F9F7] rounded-2xl p-4 border border-neutral-200/70">
+                  <div class="text-xs font-extrabold uppercase tracking-wider text-muted mb-1 flex items-center gap-1.5">
+                    <i class="ph-fill ph-file-text"></i>
+                    <span>Enunciado da Questão</span>
+                  </div>
+                  <p class="text-xs sm:text-sm text-ink/90 leading-relaxed italic">"${escapeHtml(err.enunciado)}"</p>
+                  ${err.imagem ? `<img src="${err.imagem}" alt="Print da questão" class="mt-3 max-h-64 rounded-xl border border-neutral-300 object-contain" />` : ''}
+                </div>
+              ` : ''}
+
+              <!-- Bottom Action Pills inside Card -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <button onclick="incrementErrorRecurrence('${err.id}')" class="px-3.5 py-1.5 rounded-full bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="ph-bold ph-arrow-Fat-lines-up"></i>
+                    <span>Errei isso de novo (+1)</span>
+                  </button>
+
+                  <button onclick="toggleSolidified('${err.id}')" class="px-3.5 py-1.5 rounded-full ${err.solidificado ? 'bg-cirurgia-bg text-cirurgia-text' : 'bg-[#F3F4F1] text-muted'} text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="ph-fill ${err.solidificado ? 'ph-check-circle' : 'ph-circle'}"></i>
+                    <span>${err.solidificado ? 'Conceito Solidificado 🎉' : 'Marcar como Solidificado'}</span>
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button onclick="openGeneratorForError('${err.id}')" class="px-3.5 py-1.5 rounded-full bg-[#F0D9FA] text-[#581C87] text-xs font-extrabold flex items-center gap-1 hover:brightness-95 transition">
+                    <i class="ph-bold ph-sparkle"></i>
+                    <span>+ Criar Novo Card</span>
+                  </button>
+                  <button onclick="deleteError('${err.id}')" class="w-8 h-8 rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-500 hover:text-red-600 flex items-center justify-center transition" title="Excluir registro">
+                    <i class="ph-bold ph-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderSidebarRadar() {
+      const container = document.getElementById('sidebarSpecialtyRadar');
+      container.innerHTML = Object.values(SPECIALTIES).map(spec => {
+        const specErrors = state.errors.filter(e => e.especialidade === spec.id);
+        const specCards = state.flashcards.filter(c => c.especialidade === spec.id);
+        return `
+          <div onclick="setSpecialtyFilter('${spec.id}')" style="background-color: ${spec.bg}; border-color: ${spec.border}" class="cursor-pointer p-4 rounded-2xl border transition hover:scale-[1.01] flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-white/90 flex items-center justify-center text-xl shadow-sm">${spec.icon}</div>
+              <div>
+                <h4 class="text-sm font-extrabold" style="color: ${spec.text}">${spec.id}</h4>
+                <p class="text-xs font-semibold text-ink/70">${specErrors.length} erro(s) • ${specCards.length} flashcard(s)</p>
+              </div>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center text-ink">
+              <i class="ph-bold ph-caret-right text-sm"></i>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleExpandError(errorId) {
+      const idx = state.expandedErrorIds.indexOf(errorId);
+      if (idx >= 0) {
+        state.expandedErrorIds.splice(idx, 1);
+      } else {
+        state.expandedErrorIds.push(errorId);
+      }
+      renderErrorsList();
+    }
+
+    function incrementErrorRecurrence(errorId) {
+      const err = state.errors.find(e => e.id === errorId);
+      if (!err) return;
+      err.recorrencia = (err.recorrencia || 1) + 1;
+      err.solidificado = false;
+      saveAppState();
+      renderErrorsView();
+      showToast(`Alerta de recorrência aumentado (${err.recorrencia}x) em "${err.subtema}"!`, 'warning');
+    }
+
+    function toggleSolidified(errorId) {
+      const err = state.errors.find(e => e.id === errorId);
+      if (!err) return;
+      err.solidificado = !err.solidificado;
+      saveAppState();
+      renderErrorsView();
+      showToast(err.solidificado ? 'Conceito marcado como solidificado! 🎉' : 'Marcado como em revisão.', 'check');
+    }
+
+    function deleteError(errorId) {
+      state.errors = state.errors.filter(e => e.id !== errorId);
+      state.flashcards = state.flashcards.filter(c => c.errorId !== errorId);
+      saveAppState();
+      renderErrorsView();
+      showToast('Registro removido do Caderno de Erros.', 'trash');
+    }
+
+    // =========================================================
+    // MODAL 1: ADD / EDIT ERROR ENTRY
+    // =========================================================
+    function openErrorModal() {
+      document.getElementById('formErrorId').value = '';
+      document.getElementById('formSubtema').value = '';
+      document.getElementById('formBanca').value = '';
+      document.getElementById('formEnunciado').value = '';
+      document.getElementById('formAnalise').value = '';
+      document.getElementById('formConceito').value = '';
+      state.modalImageDataUrl = '';
+      document.getElementById('imagePreviewContainer').classList.add('hidden');
+
+      renderModalSpecialtyChips();
+      renderModalReasonChips();
+      document.getElementById('errorModal').classList.remove('hidden');
+    }
+
+    function closeErrorModal() {
+      document.getElementById('errorModal').classList.add('hidden');
+    }
+
+    function renderModalSpecialtyChips() {
+      const container = document.getElementById('modalSpecialtyChips');
+      container.innerHTML = Object.values(SPECIALTIES).map(spec => {
+        const selected = state.modalSelectedSpecialty === spec.id;
+        return `
+          <button type="button" onclick="selectModalSpecialty('${spec.id}')"
+            style="background-color: ${spec.bg}; color: ${spec.text}; border-color: ${selected ? '#141414' : spec.border}"
+            class="p-2.5 rounded-2xl border-2 text-left transition flex flex-col justify-between ${selected ? 'ring-2 ring-navdark scale-[1.02]' : 'opacity-75 hover:opacity-100'}">
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="text-lg">${spec.icon}</span>
+              ${selected ? '<i class="ph-fill ph-check-circle text-navdark text-base"></i>' : ''}
+            </div>
+            <span class="text-xs font-extrabold leading-tight">${spec.short}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectModalSpecialty(specId) {
+      state.modalSelectedSpecialty = specId;
+      renderModalSpecialtyChips();
+    }
+
+    function renderModalReasonChips() {
+      const container = document.getElementById('modalReasonChips');
+      container.innerHTML = ERROR_REASONS.map(r => {
+        const selected = state.modalSelectedReason === r.id;
+        return `
+          <button type="button" onclick="selectModalReason('${r.id}')"
+            class="px-3.5 py-2 rounded-full text-xs font-bold transition flex items-center gap-1.5 ${
+              selected ? 'bg-navdark text-white shadow-sm' : 'bg-[#F3F4F1] text-ink hover:bg-neutral-200'
+            }">
+            <span>${r.icon}</span>
+            <span>${r.label}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectModalReason(reasonId) {
+      state.modalSelectedReason = reasonId;
+      renderModalReasonChips();
+    }
+
+    function toggleEnunciadoCollapse() {
+      const el = document.getElementById('enunciadoCollapsible');
+      const icon = document.getElementById('enunciadoToggleIcon');
+      el.classList.toggle('hidden');
+      icon.classList.toggle('ph-caret-up');
+      icon.classList.toggle('ph-caret-down');
+    }
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        state.modalImageDataUrl = e.target.result;
+        document.getElementById('formImagePreview').src = state.modalImageDataUrl;
+        document.getElementById('imagePreviewContainer').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearImageAttachment() {
+      state.modalImageDataUrl = '';
+      document.getElementById('formImagemInput').value = '';
+      document.getElementById('imagePreviewContainer').classList.add('hidden');
+    }
+
+    function saveErrorEntry(openCardGeneratorAfter) {
+      const subtema = document.getElementById('formSubtema').value.trim();
+      const banca = document.getElementById('formBanca').value.trim();
+      const enunciado = document.getElementById('formEnunciado').value.trim();
+      const analise = document.getElementById('formAnalise').value.trim();
+      const conceito = document.getElementById('formConceito').value.trim();
+
+      if (!subtema || !conceito) {
+        showToast('Preencha pelo menos o Subtema e o Conceito a Solidificar!', 'warning');
+        return;
+      }
+
+      const newError = {
+        id: 'err-' + Date.now(),
+        especialidade: state.modalSelectedSpecialty,
+        subtema,
+        banca: banca || 'Simulado Residência',
+        enunciado,
+        imagem: state.modalImageDataUrl || '',
+        motivo: state.modalSelectedReason,
+        analise: analise || 'Revisar atenção aos critérios diagnósticos do caso.',
+        conceito,
+        recorrencia: 1,
+        solidificado: false,
+        criadoEm: new Date().toLocaleDateString('pt-BR')
+      };
+
+      state.errors.unshift(newError);
+      state.expandedErrorIds.unshift(newError.id);
+      saveAppState();
+      closeErrorModal();
+      renderErrorsView();
+
+      if (openCardGeneratorAfter) {
+        openGeneratorForError(newError.id);
+      } else {
+        showToast('Erro registrado com sucesso no seu Caderno!', 'check');
+      }
+    }
+
+    // =========================================================
+    // MODAL 2: FLASHCARD GENERATOR (3 MODES)
+    // =========================================================
+    function openGeneratorWithoutError() {
+      if (state.errors.length === 0) {
+        showToast('Registre primeiro um erro no Caderno!', 'warning');
+        return;
+      }
+      openGeneratorForError(state.errors[0].id);
+    }
+
+    function openGeneratorForError(errorId) {
+      const select = document.getElementById('genSourceErrorSelect');
+      select.innerHTML = state.errors.map(err => `
+        <option value="${err.id}" ${err.id === errorId ? 'selected' : ''}>
+          [${err.especialidade}] ${escapeHtml(err.subtema)}
+        </option>
+      `).join('');
+
+      state.generatorMode = 'direta';
+      populateGeneratorFromSelectedError();
+      document.getElementById('generatorModal').classList.remove('hidden');
+    }
+
+    function closeGeneratorModal() {
+      document.getElementById('generatorModal').classList.add('hidden');
+    }
+
+    function populateGeneratorFromSelectedError() {
+      const errorId = document.getElementById('genSourceErrorSelect').value;
+      const err = state.errors.find(e => e.id === errorId);
+      if (!err) return;
+
+      const spec = SPECIALTIES[err.especialidade] || SPECIALTIES['Clínica Médica'];
+      document.getElementById('genSpecialtyBadgePreview').innerHTML = `
+        <span style="background-color: ${spec.bg}; color: ${spec.text}; border-color: ${spec.border}" class="px-3.5 py-1.5 rounded-full text-xs font-extrabold border inline-flex items-center gap-1.5">
+          <span>${spec.icon}</span>
+          <span>${spec.id}</span>
+        </span>
+      `;
+
+      // Build clickable Cloze suggestion chips from words > 4 chars in conceito
+      const keyTerms = err.conceito
+        .split(/[\s,.;:!()]+/)
+        .filter(w => w.length >= 5)
+        .slice(0, 8);
+
+      const chipsContainer = document.getElementById('quickClozeChips');
+      chipsContainer.innerHTML = keyTerms.map(term => `
+        <button type="button" onclick="clozeSpecificWord('${escapeHtml(term)}')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-navdark hover:text-white text-xs font-bold text-ink border border-go-border transition">
+          + {{c1::${escapeHtml(term)}}}
+        </button>
+      `).join('');
+
+      setGeneratorMode(state.generatorMode);
+    }
+
+    function setGeneratorMode(mode) {
+      state.generatorMode = mode;
+      const errorId = document.getElementById('genSourceErrorSelect').value;
+      const err = state.errors.find(e => e.id === errorId);
+      if (!err) return;
+
+      // Update Mode Buttons styling
+      const modes = {
+        direta: document.getElementById('modeBtnDirect'),
+        cloze: document.getElementById('modeBtnCloze'),
+        ia: document.getElementById('modeBtnAI')
+      };
+      Object.entries(modes).forEach(([k, btn]) => {
+        if (k === mode) {
+          btn.className = 'p-3 rounded-xl text-left transition border-2 border-navdark bg-navdark text-white';
+        } else {
+          btn.className = 'p-3 rounded-xl text-left transition border-2 border-transparent hover:bg-neutral-100 text-ink';
+        }
+      });
+
+      const frontInput = document.getElementById('genFrontInput');
+      const backInput = document.getElementById('genBackInput');
+
+      if (mode === 'direta') {
+        frontInput.value = `Em relação a ${err.subtema}, qual a regra diagnóstica e a conduta prioritária diante desse quadro?`;
+        backInput.value = err.conceito;
+      } else if (mode === 'cloze') {
+        // Automatically turn 1 or 2 high-yield terms into Cloze format
+        let sentence = err.conceito;
+        const words = sentence.split(' ');
+        if (words.length > 5 && !sentence.includes('{{c1::')) {
+          words[words.length - 2] = `{{c1::${words[words.length - 2]}}}`;
+          sentence = words.join(' ');
+        }
+        frontInput.value = sentence;
+        backInput.value = `${err.conceito}\n\n💡 Âncora: ${err.analise}`;
+      } else if (mode === 'ia') {
+        applyAISynthesis();
+      }
+    }
+
+    function wrapSelectionInCloze() {
+      const textarea = document.getElementById('genFrontInput');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+
+      if (start === end) {
+        showToast('Selecione uma palavra ou trecho na caixa "Frente do Flashcard" primeiro!', 'warning');
+        return;
+      }
+
+      const selectedText = text.substring(start, end);
+      const replacement = `{{c1::${selectedText}}}`;
+      textarea.value = text.substring(0, start) + replacement + text.substring(end);
+      state.generatorMode = 'cloze';
+      showToast(`Trecho "${selectedText}" transformado em lacuna Cloze!`, 'sparkles');
+    }
+
+    function clozeSpecificWord(word) {
+      const textarea = document.getElementById('genFrontInput');
+      if (!textarea.value.includes(word)) {
+        textarea.value += ` {{c1::${word}}}`;
+      } else {
+        textarea.value = textarea.value.replace(word, `{{c1::${word}}}`);
+      }
+      showToast(`Palavra "${word}" ocultada com [...]!`, 'sparkles');
+    }
+
+    function applyAISynthesis() {
+      const errorId = document.getElementById('genSourceErrorSelect').value;
+      const err = state.errors.find(e => e.id === errorId);
+      if (!err) return;
+
+      const snippet = err.enunciado
+        ? err.enunciado.slice(0, 140) + (err.enunciado.length > 140 ? '...' : '')
+        : `Caso clínico clássico de ${err.subtema} (${err.banca}).`;
+
+      document.getElementById('genFrontInput').value = `[Caso Rápido • ${err.banca}] ${snippet}\n👉 Qual a armadilha clássica e a conduta padrão-ouro?`;
+      document.getElementById('genBackInput').value = `✅ Regra de Ouro: ${err.conceito}\n⚠️ Evitar armadilha: ${err.analise}`;
+      showToast('Síntese clínica gerada automaticamente!', 'sparkles');
+    }
+
+    function saveGeneratedFlashcard() {
+      const errorId = document.getElementById('genSourceErrorSelect').value;
+      const err = state.errors.find(e => e.id === errorId);
+      if (!err) return;
+
+      const frente = document.getElementById('genFrontInput').value.trim();
+      const verso = document.getElementById('genBackInput').value.trim();
+
+      if (!frente || !verso) {
+        showToast('Preencha a Frente e o Verso do cartão!', 'warning');
+        return;
+      }
+
+      const newCard = {
+        id: 'card-' + Date.now(),
+        errorId: err.id,
+        especialidade: err.especialidade,
+        subtema: err.subtema,
+        modo: frente.includes('{{c1::') ? 'cloze' : state.generatorMode,
+        frente,
+        verso,
+        analiseLembrete: err.analise,
+        intervaloDias: 1,
+        dueToday: true,
+        revisoes: 0
+      };
+
+      state.flashcards.unshift(newCard);
+      saveAppState();
+      closeGeneratorModal();
+
+      // Switch to Flashcards view and load this card
+      state.selectedDeckSpecialty = err.especialidade;
+      state.activeCardIndex = 0;
+      state.isCardFlipped = false;
+      switchTab('flashcards');
+      showToast('Flashcard adicionado ao baralho de ' + err.especialidade + '!', 'sparkles');
+    }
+
+    // =========================================================
+    // VIEW 2: FLASHCARDS & SPACED REPETITION SYSTEM (SRS)
+    // =========================================================
+    function renderFlashcardsView() {
+      updateGlobalCounters();
+      renderDecksBentoGrid();
+      renderActiveFlashcardPlayer();
+      renderDeckCardsSidebarList();
+    }
+
+    function getFilteredDeckCards() {
+      if (state.selectedDeckSpecialty === 'TODAS') {
+        return state.flashcards;
+      }
+      return state.flashcards.filter(c => c.especialidade === state.selectedDeckSpecialty);
+    }
+
+    function renderDecksBentoGrid() {
+      const container = document.getElementById('decksBentoGrid');
+      const allSelected = state.selectedDeckSpecialty === 'TODAS';
+      const totalDue = state.flashcards.filter(c => c.dueToday).length;
+
+      let html = `
+        <div onclick="selectDeckSpecialty('TODAS')" class="cursor-pointer rounded-bento p-4 border-2 transition bento-card flex flex-col justify-between ${
+          allSelected ? 'bg-navdark text-white border-navdark shadow-md' : 'bg-white text-ink border-neutral-200/80'
+        }">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">📚</span>
+            <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${allSelected ? 'bg-white/20 text-white' : 'bg-neutral-100 text-ink'}">${totalDue} hoje</span>
+          </div>
+          <div class="mt-3">
+            <h4 class="font-extrabold text-sm leading-tight">Revisão Geral</h4>
+            <p class="text-[11px] opacity-75 mt-0.5">${state.flashcards.length} cards no total</p>
+          </div>
+        </div>
+      `;
+
+      Object.values(SPECIALTIES).forEach(spec => {
+        const cards = state.flashcards.filter(c => c.especialidade === spec.id);
+        const due = cards.filter(c => c.dueToday).length;
+        const isSelected = state.selectedDeckSpecialty === spec.id;
+
+        html += `
+          <div onclick="selectDeckSpecialty('${spec.id}')"
+            style="background-color: ${spec.bg}; border-color: ${isSelected ? '#141414' : spec.border}"
+            class="cursor-pointer rounded-bento p-4 border-2 transition bento-card flex flex-col justify-between ${isSelected ? 'ring-2 ring-navdark shadow-md' : ' opacity-90 hover:opacity-100'}">
+            <div class="flex items-center justify-between">
+              <span class="text-xl">${spec.icon}</span>
+              <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-white/85" style="color: ${spec.text}">${due} hoje</span>
+            </div>
+            <div class="mt-3">
+              <h4 class="font-extrabold text-sm leading-tight" style="color: ${spec.text}">${spec.short}</h4>
+              <p class="text-[11px] font-semibold text-ink/70 mt-0.5">${cards.length} flashcard(s)</p>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function selectDeckSpecialty(specId) {
+      state.selectedDeckSpecialty = specId;
+      state.activeCardIndex = 0;
+      state.isCardFlipped = false;
+      renderFlashcardsView();
+    }
+
+    function formatClozeText(rawText, isRevealed) {
+      const escaped = escapeHtml(rawText);
+      return escaped.replace(/\{\{c1::(.*?)\}\}/g, (match, term) => {
+        if (isRevealed) {
+          return `<span class="cloze-revealed">${term}</span>`;
+        } else {
+          return `<span class="cloze-blank">[ ... ]</span>`;
+        }
+      });
+    }
+
+    function renderActiveFlashcardPlayer() {
+      const stage = document.getElementById('flashcardStage');
+      const titleEl = document.getElementById('activeDeckTitle');
+      const counterEl = document.getElementById('reviewCounterText');
+
+      const deck = getFilteredDeckCards();
+      titleEl.textContent = state.selectedDeckSpecialty === 'TODAS'
+        ? 'Estudando: Todas as 5 Áreas'
+        : `Baralho: ${state.selectedDeckSpecialty}`;
+
+      if (deck.length === 0) {
+        counterEl.textContent = '0 cards';
+        stage.innerHTML = `
+          <div class="bg-white rounded-bento-lg p-10 text-center border border-neutral-200 shadow-bento space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-[#F3F4F1] mx-auto flex items-center justify-center text-3xl">✨</div>
+            <h3 class="text-xl font-extrabold text-ink">Nenhum flashcard neste baralho ainda</h3>
+            <p class="text-xs text-muted max-w-md mx-auto">Gere cartões com 1 clique a partir das questões registradas no seu Caderno de Erros.</p>
+            <button onclick="openGeneratorWithoutError()" class="px-5 py-2.5 rounded-full bg-navdark text-white text-xs font-bold">+ Gerar Flashcard Agora</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.activeCardIndex >= deck.length) {
+        state.activeCardIndex = 0;
+      }
+
+      const card = deck[state.activeCardIndex];
+      const spec = SPECIALTIES[card.especialidade] || SPECIALTIES['Clínica Médica'];
+      counterEl.textContent = `Card ${state.activeCardIndex + 1} de ${deck.length}`;
+
+      const formattedFront = formatClozeText(card.frente, state.isCardFlipped);
+
+      stage.innerHTML = `
+        <div style="background-color: ${spec.bg}; border-color: ${spec.border}" class="rounded-[28px] p-6 sm:p-8 border-2 shadow-bento min-h-[390px] flex flex-col justify-between relative transition-all">
+          
+          <!-- Card Header -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="px-3.5 py-1 rounded-full bg-white/90 text-xs font-extrabold flex items-center gap-1.5 shadow-sm" style="color: ${spec.text}">
+                <span>${spec.icon}</span>
+                <span>${card.especialidade}</span>
+              </span>
+              <span class="px-3 py-1 rounded-full bg-white/60 text-ink text-xs font-bold">
+                ${escapeHtml(card.subtema)}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <span class="px-2.5 py-1 rounded-full bg-navdark/10 text-ink text-[11px] font-extrabold uppercase">
+                ${card.modo === 'cloze' ? 'Omissão Cloze' : 'Pergunta Ativa'}
+              </span>
+              <button onclick="prevCard()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-ink" title="Anterior">
+                <i class="ph-bold ph-caret-left"></i>
+              </button>
+              <button onclick="nextCard()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-ink" title="Próximo">
+                <i class="ph-bold ph-caret-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- FRONT CONTENT -->
+          <div class="my-6 space-y-4">
+            <div class="text-xs font-extrabold uppercase tracking-wider opacity-70" style="color: ${spec.text}">
+              ${state.isCardFlipped ? 'Frente (Gatilho resolvido)' : 'Frente • Pergunta / Gatilho Clínico'}
+            </div>
+            <div class="text-lg sm:text-xl font-bold text-ink leading-relaxed whitespace-pre-line">
+              ${formattedFront}
+            </div>
+          </div>
+
+          <!-- REVEALED BACK CONTENT OR FLIP BUTTON -->
+          ${!state.isCardFlipped ? `
+            <div class="pt-4 border-t border-black/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span class="text-xs font-semibold text-ink/70 flex items-center gap-1.5">
+                <i class="ph-fill ph-Brain"></i> Pense na regra de ouro antes de virar o cartão
+              </span>
+              <button onclick="flipActiveCard()" class="w-full sm:w-auto px-7 py-3.5 rounded-full bg-navdark hover:bg-neutral-800 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95">
+                <i class="ph-bold ph-eye text-lg text-[#DDF3DC]"></i>
+                <span>Mostrar Resposta</span>
+              </button>
+            </div>
+          ` : `
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-black/5 space-y-3.5 animate-fadeIn">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+                  <i class="ph-fill ph-check-circle text-base"></i>
+                  <span>Verso • Conceito a Solidificar</span>
+                </span>
+                <button onclick="navigateToSourceError('${card.errorId}')" class="text-xs font-extrabold text-ink hover:underline flex items-center gap-1 bg-[#F3F4F1] px-3 py-1 rounded-full">
+                  <i class="ph-bold ph-link"></i>
+                  <span>Ver questão original no Caderno</span>
+                </button>
+              </div>
+
+              <p class="text-sm sm:text-base font-bold text-ink leading-relaxed whitespace-pre-line">${escapeHtml(card.verso)}</p>
+
+              ${card.analiseLembrete ? `
+                <div class="p-3 rounded-xl bg-[#F8F9F7] border border-neutral-200 text-xs text-muted flex items-start gap-2">
+                  <span class="text-sm">💡</span>
+                  <span><strong>Lembrete da sua análise:</strong> ${escapeHtml(card.analiseLembrete)}</span>
+                </div>
+              ` : ''}
+
+              <!-- 4 SPACED REPETITION (SRS) RATING BUTTONS -->
+              <div class="pt-2">
+                <div class="text-[11px] font-bold text-center text-muted mb-2 uppercase tracking-wider">Avalie sua retenção (Repetição Espaçada)</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button onclick="rateCardSRS('${card.id}', 'errei', 1)" class="p-2.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-900 font-extrabold text-xs flex flex-col items-center transition active:scale-95">
+                    <span>Errei ⚠️</span>
+                    <span class="text-[10px] font-semibold opacity-80">1 dia (+1 erro no caderno)</span>
+                  </button>
+                  <button onclick="rateCardSRS('${card.id}', 'dificil', 2)" class="p-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-extrabold text-xs flex flex-col items-center transition active:scale-95">
+                    <span>Difícil</span>
+                    <span class="text-[10px] font-semibold opacity-80">Rever em 2 dias</span>
+                  </button>
+                  <button onclick="rateCardSRS('${card.id}', 'bom', 4)" class="p-2.5 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold text-xs flex flex-col items-center transition active:scale-95">
+                    <span>Bom</span>
+                    <span class="text-[10px] font-semibold opacity-80">Rever em 4 dias</span>
+                  </button>
+                  <button onclick="rateCardSRS('${card.id}', 'facil', 7)" class="p-2.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-extrabold text-xs flex flex-col items-center transition active:scale-95">
+                    <span>Fácil 🎉</span>
+                    <span class="text-[10px] font-semibold opacity-80">7 dias (Solidifica!)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `}
+
+        </div>
+      `;
+    }
+
+    function flipActiveCard() {
+      state.isCardFlipped = true;
+      renderActiveFlashcardPlayer();
+    }
+
+    function prevCard() {
+      const deck = getFilteredDeckCards();
+      if (deck.length === 0) return;
+      state.activeCardIndex = (state.activeCardIndex - 1 + deck.length) % deck.length;
+      state.isCardFlipped = false;
+      renderFlashcardsView();
+    }
+
+    function nextCard() {
+      const deck = getFilteredDeckCards();
+      if (deck.length === 0) return;
+      state.activeCardIndex = (state.activeCardIndex + 1) % deck.length;
+      state.isCardFlipped = false;
+      renderFlashcardsView();
+    }
+
+    function rateCardSRS(cardId, rating, days) {
+      const card = state.flashcards.find(c => c.id === cardId);
+      if (!card) return;
+
+      card.intervaloDias = days;
+      card.revisoes = (card.revisoes || 0) + 1;
+
+      const linkedError = state.errors.find(e => e.id === card.errorId);
+
+      if (rating === 'errei') {
+        card.dueToday = true;
+        if (linkedError) {
+          linkedError.recorrencia = (linkedError.recorrencia || 1) + 1;
+          linkedError.solidificado = false;
+        }
+        showToast('Card mantido para hoje e alerta de recorrência (+1) registrado no Caderno!', 'warning');
+      } else {
+        card.dueToday = false;
+        if (rating === 'facil' && linkedError) {
+          linkedError.solidificado = true;
+          showToast('Excelente! Conceito marcado como Solidificado 🎉 (Próxima revisão: 7d)', 'check');
+        } else {
+          showToast(`Revisão agendada para daqui a ${days} dias!`, 'check');
+        }
+      }
+
+      saveAppState();
+      // Advance to next card
+      const deck = getFilteredDeckCards();
+      if (deck.length > 0) {
+        state.activeCardIndex = (state.activeCardIndex + 1) % deck.length;
+      }
+      state.isCardFlipped = false;
+      renderFlashcardsView();
+    }
+
+    function resetAllCardsDueNow() {
+      state.flashcards.forEach(c => c.dueToday = true);
+      saveAppState();
+      renderFlashcardsView();
+      showToast('Todos os flashcards foram liberados para revisão imediata!', 'sparkles');
+    }
+
+    function renderDeckCardsSidebarList() {
+      const listContainer = document.getElementById('deckCardsList');
+      const badge = document.getElementById('deckTotalBadge');
+      const deck = getFilteredDeckCards();
+
+      badge.textContent = `${deck.length} card${deck.length === 1 ? '' : 's'}`;
+
+      if (deck.length === 0) {
+        listContainer.innerHTML = `<p class="text-xs text-muted py-4 text-center">Sem cartões para esta seleção.</p>`;
+        return;
+      }
+
+      listContainer.innerHTML = deck.map((c, idx) => {
+        const spec = SPECIALTIES[c.especialidade] || SPECIALTIES['Clínica Médica'];
+        const isCurrent = idx === state.activeCardIndex;
+        const cleanPreview = c.frente.replace(/\{\{c1::(.*?)\}\}/g, '[$1]');
+
+        return `
+          <div onclick="selectCardFromList(${idx})"
+            class="cursor-pointer p-3.5 rounded-2xl border transition flex items-start justify-between gap-3 ${
+              isCurrent ? 'bg-navdark text-white border-navdark shadow-sm' : 'bg-[#F8F9F7] hover:bg-neutral-200/70 text-ink border-neutral-200/80'
+            }">
+            <div class="space-y-1 flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm">${spec.icon}</span>
+                <span class="text-xs font-extrabold truncate">${escapeHtml(c.subtema)}</span>
+              </div>
+              <p class="text-xs ${isCurrent ? 'text-neutral-300' : 'text-muted'} line-clamp-2">${escapeHtml(cleanPreview)}</p>
+            </div>
+            <div class="flex flex-col items-end gap-1 shrink-0">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                c.dueToday ? 'bg-[#DDF3DC] text-[#14532D]' : 'bg-neutral-200 text-neutral-700'
+              }">
+                ${c.dueToday ? 'Hoje' : `${c.intervaloDias}d`}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectCardFromList(index) {
+      state.activeCardIndex = index;
+      state.isCardFlipped = false;
+      renderFlashcardsView();
+    }
+
+    // =========================================================
+    // BIDIRECTIONAL NAVIGATION (ERROR <-> FLASHCARD)
+    // =========================================================
+    function jumpToFlashcardFromError(errorId) {
+      const idx = state.flashcards.findIndex(c => c.errorId === errorId);
+      if (idx === -1) {
+        openGeneratorForError(errorId);
+        return;
+      }
+      state.selectedDeckSpecialty = 'TODAS';
+      state.activeCardIndex = idx;
+      state.isCardFlipped = false;
+      switchTab('flashcards');
+    }
+
+    function navigateToSourceError(errorId) {
+      state.selectedSpecialtyFilter = 'TODAS';
+      if (!state.expandedErrorIds.includes(errorId)) {
+        state.expandedErrorIds.push(errorId);
+      }
+      switchTab('erros');
+
+      setTimeout(() => {
+        const el = document.getElementById(`error-card-${errorId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('pulse-target');
+          setTimeout(() => el.classList.remove('pulse-target'), 2200);
+        }
+      }, 100);
+    }
+
+    // =========================================================
+    // UTILITIES & TOASTS
+    // =========================================================
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function showToast(message, type = 'check') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const icons = {
+        check: '<i class="ph-fill ph-check-circle text-emerald-400 text-lg"></i>',
+        warning: '<i class="ph-fill ph-warning-circle text-amber-400 text-lg"></i>',
+        sparkles: '<i class="ph-fill ph-sparkle text-purple-300 text-lg"></i>',
+        trash: '<i class="ph-fill ph-trash text-red-400 text-lg"></i>'
+      };
+
+      toast.className = 'bg-navdark text-white px-4 py-3 rounded-2xl shadow-floating border border-white/15 flex items-center gap-2.5 text-xs sm:text-sm font-bold pointer-events-auto transition-all duration-300';
+      toast.innerHTML = `${icons[type] || icons.check}<span>${escapeHtml(message)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // Boot Application on Window Load
+    window.onload = function () {
+      loadAppState();
+      renderErrorsView();
+    };
+  </script>
+</body>
+</html>
